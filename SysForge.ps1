@@ -183,7 +183,7 @@ $mainXaml = @'
     </Grid.RowDefinitions>
 
     <DockPanel Grid.Row="0" Margin="0,0,0,10">
-      <Button x:Name="btnTheme" DockPanel.Dock="Right" Content="&#x2699;" FontFamily="Segoe UI Symbol" FontSize="18" ToolTip="Settings" Padding="10,2" MinWidth="40"/>
+      <Button x:Name="btnTheme" DockPanel.Dock="Right" Content="Light / Dark" Padding="12,6"/>
       <StackPanel Orientation="Horizontal">
         <TextBlock Text="SysForge" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" Margin="2,0,22,0"/>
         <RadioButton x:Name="navInstall"   Style="{StaticResource NavTab}" GroupName="nav" Content="Install" IsChecked="True"/>
@@ -517,6 +517,10 @@ Development|JetBrains Toolbox|JetBrains.Toolbox|jetbrainstoolbox
 Development|Postman|Postman.Postman|postman
 Development|WinSCP|WinSCP.WinSCP|winscp
 Development|PuTTY|PuTTY.PuTTY|putty
+Development|.NET SDK 8.0|Microsoft.DotNet.SDK.8|dotnet-8.0-sdk
+Development|PostgreSQL 17|PostgreSQL.PostgreSQL.17|postgresql
+Development|Oracle SQL Developer|Oracle.SQLDeveloper|sqldeveloper
+Development|MongoDB Compass|MongoDB.Compass.Full|mongodb-compass
 Documents|LibreOffice|TheDocumentFoundation.LibreOffice|libreoffice-fresh
 Documents|Adobe Acrobat Reader|Adobe.Acrobat.Reader.64-bit|adobereader
 Documents|SumatraPDF|SumatraPDF.SumatraPDF|sumatrapdf
@@ -549,6 +553,14 @@ Multimedia|Kdenlive|KDE.Kdenlive|kdenlive
 Multimedia|ShareX|ShareX.ShareX|sharex
 Multimedia|ImageGlass|DuongDieuPhap.ImageGlass|imageglass
 Multimedia|Spotify|Spotify.Spotify|spotify
+Productivity|Todoist|Doist.Todoist|
+Productivity|Joplin|Joplin.Joplin|joplin
+Productivity|Logseq|Logseq.Logseq|logseq
+Productivity|Anki|Anki.Anki|anki
+Productivity|Zotero|DigitalScholar.Zotero|zotero
+Productivity|Flow Launcher|Flow-Launcher.Flow-Launcher|flow-launcher
+Productivity|Ditto Clipboard|Ditto.Ditto|ditto
+Productivity|Greenshot|Greenshot.Greenshot|greenshot
 Utilities|7-Zip|7zip.7zip|7zip
 Utilities|NanaZip|M2Team.NanaZip|nanazip
 Utilities|Everything|voidtools.Everything|everything
@@ -1315,34 +1327,9 @@ function Show-View([string]$nav) {
 }
 foreach ($n in $script:Views.Keys) { (Get-Variable $n -Scope Script -ValueOnly).Add_Checked({ param($s, $e) Show-View $s.Name }) }
 
-# Settings (gear) button -> dropdown menu: Auto / Light Mode / Dark Mode
-function Apply-ThemeMode([string]$mode) {
-    $script:ThemeMode = $mode
-    $target = $mode
-    if ($mode -eq 'Auto') {
-        $target = 'Light'
-        if ((Get-Reg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' 'AppsUseLightTheme' 1) -eq 0) { $target = 'Dark' }
-    }
-    Set-Theme $target
-    foreach ($k in $script:ThemeItems.Keys) { $script:ThemeItems[$k].IsChecked = ($k -eq $mode) }
-}
-$script:ThemeMenu = New-Object Windows.Controls.ContextMenu
-$script:ThemeItems = @{}
-foreach ($opt in @(@('Auto','Auto'), @('Light','Light Mode'), @('Dark','Dark Mode'))) {
-    $mi = New-Object Windows.Controls.MenuItem
-    $mi.Header = $opt[1]
-    $mi.Tag = $opt[0]
-    $mi.IsCheckable = $true
-    $mi.Add_Click({ param($s, $e) Apply-ThemeMode ([string]$s.Tag) })
-    [void]$script:ThemeMenu.Items.Add($mi)
-    $script:ThemeItems[$opt[0]] = $mi
-}
-$btnTheme.Add_Click({
-    $script:ThemeMenu.PlacementTarget = $btnTheme
-    $script:ThemeMenu.Placement = [Windows.Controls.Primitives.PlacementMode]::Bottom
-    $script:ThemeMenu.IsOpen = $true
-})
-Apply-ThemeMode 'Auto'
+$btnTheme.Add_Click({ if ($script:Theme -eq 'Dark') { Set-Theme 'Light' } else { Set-Theme 'Dark' } })
+$initial = 'Light'; if ((Get-Reg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' 'AppsUseLightTheme' 1) -eq 0) { $initial = 'Dark' }
+Set-Theme $initial
 
 $window.Add_Closing({
     param($s, $e)
