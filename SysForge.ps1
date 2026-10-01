@@ -183,7 +183,7 @@ $mainXaml = @'
     </Grid.RowDefinitions>
 
     <DockPanel Grid.Row="0" Margin="0,0,0,10">
-      <Button x:Name="btnTheme" DockPanel.Dock="Right" Content="Light / Dark" Padding="12,6"/>
+      <Button x:Name="btnTheme" DockPanel.Dock="Right" Content="&#x2699;" FontFamily="Segoe UI Symbol" FontSize="18" ToolTip="Settings" Padding="10,2" MinWidth="40"/>
       <StackPanel Orientation="Horizontal">
         <TextBlock Text="SysForge" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" Margin="2,0,22,0"/>
         <RadioButton x:Name="navInstall"   Style="{StaticResource NavTab}" GroupName="nav" Content="Install" IsChecked="True"/>
@@ -1315,9 +1315,34 @@ function Show-View([string]$nav) {
 }
 foreach ($n in $script:Views.Keys) { (Get-Variable $n -Scope Script -ValueOnly).Add_Checked({ param($s, $e) Show-View $s.Name }) }
 
-$btnTheme.Add_Click({ if ($script:Theme -eq 'Dark') { Set-Theme 'Light' } else { Set-Theme 'Dark' } })
-$initial = 'Light'; if ((Get-Reg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' 'AppsUseLightTheme' 1) -eq 0) { $initial = 'Dark' }
-Set-Theme $initial
+# Settings (gear) button -> dropdown menu: Auto / Light Mode / Dark Mode
+function Apply-ThemeMode([string]$mode) {
+    $script:ThemeMode = $mode
+    $target = $mode
+    if ($mode -eq 'Auto') {
+        $target = 'Light'
+        if ((Get-Reg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' 'AppsUseLightTheme' 1) -eq 0) { $target = 'Dark' }
+    }
+    Set-Theme $target
+    foreach ($k in $script:ThemeItems.Keys) { $script:ThemeItems[$k].IsChecked = ($k -eq $mode) }
+}
+$script:ThemeMenu = New-Object Windows.Controls.ContextMenu
+$script:ThemeItems = @{}
+foreach ($opt in @(@('Auto','Auto'), @('Light','Light Mode'), @('Dark','Dark Mode'))) {
+    $mi = New-Object Windows.Controls.MenuItem
+    $mi.Header = $opt[1]
+    $mi.Tag = $opt[0]
+    $mi.IsCheckable = $true
+    $mi.Add_Click({ param($s, $e) Apply-ThemeMode ([string]$s.Tag) })
+    [void]$script:ThemeMenu.Items.Add($mi)
+    $script:ThemeItems[$opt[0]] = $mi
+}
+$btnTheme.Add_Click({
+    $script:ThemeMenu.PlacementTarget = $btnTheme
+    $script:ThemeMenu.Placement = [Windows.Controls.Primitives.PlacementMode]::Bottom
+    $script:ThemeMenu.IsOpen = $true
+})
+Apply-ThemeMode 'Auto'
 
 $window.Add_Closing({
     param($s, $e)
