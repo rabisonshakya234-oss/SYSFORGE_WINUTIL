@@ -967,61 +967,6 @@ foreach ($p in $Prefs) {
     [void]$prefHost.Children.Add($cb)
 }
 
-# ---- Power plans: Ultimate / High Performance (bottom of Customize Preferences) ----
-$script:GuidBalanced = '381b4222-f694-41f0-9685-ff5bb260df2e'
-$script:GuidHigh     = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c'
-$script:GuidUltimate = 'e9a42b02-d5df-448d-aa00-03f14749eb61'
-$script:GuidRegex    = '([0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})'
-
-function Get-PlanGuid([string]$namePattern, [string]$baseGuid) {
-    $out = powercfg.exe /list | Out-String
-    foreach ($line in ($out -split "`r?`n")) {
-        if ($line -match $script:GuidRegex) {
-            $g = $Matches[1]
-            if ($line -match $namePattern -or $g -eq $baseGuid) { return $g }
-        }
-    }
-    return $null
-}
-
-function Enable-PowerPlan([string]$baseGuid, [string]$namePattern, [string]$label) {
-    try {
-        $g = Get-PlanGuid $namePattern $baseGuid
-        if (-not $g) {
-            $o = powercfg.exe -duplicatescheme $baseGuid 2>&1 | Out-String
-            if ($o -match $script:GuidRegex) { $g = $Matches[1] }
-        }
-        if (-not $g) { Msg "$label plan is not available on this system." 'OK' 'Warning'; return }
-        powercfg.exe /setactive $g | Out-Null
-        Set-Status "$label power plan enabled."
-    } catch { Msg "Could not enable ${label}: $($_.Exception.Message)" 'OK' 'Error' }
-}
-
-function Disable-PowerPlan([string]$baseGuid, [string]$namePattern, [string]$label, [bool]$deletePlan) {
-    try {
-        powercfg.exe /setactive $script:GuidBalanced | Out-Null     # switch to Balanced first
-        if ($deletePlan) {
-            $g = Get-PlanGuid $namePattern $baseGuid
-            if ($g) { powercfg.exe /delete $g | Out-Null }
-        }
-        Set-Status "$label disabled. Switched to Balanced power plan."
-    } catch { Msg "Could not disable ${label}: $($_.Exception.Message)" 'OK' 'Error' }
-}
-
-$prefHost.Children.Add((New-Heading 'Power Plans')) | Out-Null
-$powerButtons = @(
-    @{ T = 'Ultimate Performance - Enable';  A = { Enable-PowerPlan  $script:GuidUltimate 'Ultimate Performance' 'Ultimate Performance' } },
-    @{ T = 'Ultimate Performance - Disable'; A = { Disable-PowerPlan $script:GuidUltimate 'Ultimate Performance' 'Ultimate Performance' $true } },
-    @{ T = 'High Performance - Enable';      A = { Enable-PowerPlan  $script:GuidHigh 'High performance' 'High Performance' } },
-    @{ T = 'High Performance - Disable';     A = { Disable-PowerPlan $script:GuidHigh 'High performance' 'High Performance' $false } }
-)
-foreach ($pb in $powerButtons) {
-    $b = New-Object Windows.Controls.Button
-    $b.Content = $pb.T; $b.Tag = $pb.A; $b.Margin = '0,3'
-    $b.Add_Click({ param($s, $e) & $s.Tag })
-    [void]$prefHost.Children.Add($b)
-}
-
 # ============================================================================
 #  CONFIG TAB
 # ============================================================================
