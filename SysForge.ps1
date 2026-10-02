@@ -240,6 +240,7 @@ $mainXaml = @'
           <Button x:Name="btnPMin" Content="Minimal" Margin="0,0,6,0" Width="100"/>
           <Button x:Name="btnPStd" Content="Standard" Margin="0,0,6,0" Width="100"/>
           <Button x:Name="btnPAdv" Content="Advanced" Margin="0,0,6,0" Width="100"/>
+          <Button x:Name="btnPGet" Content="Get Installed" Margin="0,0,6,0" Width="110" ToolTip="Tick the tweaks that are already applied on this PC"/>
           <Button x:Name="btnPClr" Content="Clear" Margin="0,0,6,0" Width="100"/>
         </WrapPanel>
         <Grid Grid.Row="1">
@@ -262,7 +263,43 @@ $mainXaml = @'
           <Button x:Name="btnRunTweaks" Content="Run Tweaks" Width="170" Background="{DynamicResource AccentBrush}" Foreground="White"/>
           <Button x:Name="btnUndoTweaks" Content="Undo Selected Tweaks" Width="190" Margin="8,3,0,3"/>
           <Button x:Name="btnRestartExplorer" Content="Restart Explorer" Width="150" Margin="8,3,0,3"/>
+          <Button x:Name="btnAppRemoval" Content="App Removal" Width="150" Margin="8,3,0,3" ToolTip="Install or remove built-in Windows (AppX) apps"/>
         </StackPanel>
+      </Grid>
+
+      <!-- ================= APP REMOVAL ================= -->
+      <Grid x:Name="viewAppRemoval" Visibility="Collapsed">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="Selections:" Margin="2,0,0,6"/>
+        <WrapPanel Grid.Row="1" Margin="0,0,0,10">
+          <Button x:Name="btnAppDefault" Content="Default" Width="250" Margin="0,0,6,0"/>
+          <Button x:Name="btnAppGet" Content="Get Installed" Width="250" Margin="0,0,6,0"/>
+          <Button x:Name="btnAppAll" Content="Select All" Width="250" Margin="0,0,6,0"/>
+          <Button x:Name="btnAppClear" Content="Clear Selection" Width="250" Margin="0,0,6,0"/>
+        </WrapPanel>
+        <Grid Grid.Row="2">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <Border Grid.Column="0" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrushC}" BorderThickness="1" CornerRadius="6" Padding="12">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel x:Name="appLeft"/></ScrollViewer>
+          </Border>
+          <Border Grid.Column="2" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrushC}" BorderThickness="1" CornerRadius="6" Padding="12">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel x:Name="appRight"/></ScrollViewer>
+          </Border>
+        </Grid>
+        <Border Grid.Row="3" Margin="0,10,0,0" Padding="12" CornerRadius="6" BorderThickness="1" BorderBrush="{DynamicResource BorderBrushC}" Background="{DynamicResource PanelBrush}">
+          <StackPanel>
+            <TextBlock Text="Note: Select the Windows AppX packages you wish to install or remove." TextWrapping="Wrap" Margin="0,1"/>
+            <TextBlock Text="Install Selected registers a local manifest when available, then falls back to the Microsoft Store." TextWrapping="Wrap" Margin="0,1"/>
+            <TextBlock Text="Remove Selected removes packages for the current user and all new user profiles." TextWrapping="Wrap" Margin="0,1"/>
+          </StackPanel>
+        </Border>
+        <WrapPanel Grid.Row="4" Margin="0,8,0,0">
+          <Button x:Name="btnAppBack" Content="Back to Tweaks" Width="250" Margin="0,0,6,0"/>
+          <Button x:Name="btnAppInstall" Content="Install Selected" Width="250" Margin="0,0,6,0"/>
+          <Button x:Name="btnAppRemove" Content="Remove Selected" Width="250" Margin="0,0,6,0"/>
+        </WrapPanel>
       </Grid>
 
       <!-- ================= CONFIG ================= -->
@@ -397,7 +434,8 @@ $window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader
 foreach ($n in 'btnTheme','navInstall','navTweaks','navConfig','navUpdates','navCreator11','navCreator10','viewInstall','viewTweaks','viewConfig','viewUpdates',
                'contentHost','btnInstall','btnUninstall','btnUpgradeAll','rbWinget','rbChoco','btnClear','btnCollapse','btnExpand','btnDetect','lblSelected',
                'txtSearch','filterBar','appHost','btnPMin','btnPStd','btnPAdv','btnPClr','cmbDns','btnDns','tweakHost','prefHost','btnRunTweaks','btnUndoTweaks',
-               'btnRestartExplorer','cfgLeft','cfgRight','btnUpdRec','btnUpdDef','btnUpdDis','progress','lblStatus','expLog','txtLog') {
+               'btnRestartExplorer','cfgLeft','cfgRight','btnUpdRec','btnUpdDef','btnUpdDis','progress','lblStatus','expLog','txtLog',
+               'btnPGet','btnAppRemoval','viewAppRemoval','btnAppDefault','btnAppGet','btnAppAll','btnAppClear','appLeft','appRight','btnAppBack','btnAppInstall','btnAppRemove') {
     Set-Variable -Name $n -Value $window.FindName($n) -Scope Script
 }
 $script:LogTargets = @($txtLog)
@@ -852,6 +890,39 @@ function Set-Preset([int]$lvl) {
 }
 $btnPMin.Add_Click({ Set-Preset 1 }); $btnPStd.Add_Click({ Set-Preset 2 }); $btnPAdv.Add_Click({ Set-Preset 3 }); $btnPClr.Add_Click({ Set-Preset 0 })
 
+# ---- Get Installed (Tweaks): tick the tweaks that are already applied on this PC ----
+$script:TweakDetect = @{
+    'Activity History - Disable'                = { (Get-Reg 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' 'EnableActivityFeed' 1) -eq 0 }
+    'ConsumerFeatures - Disable'                = { (Get-Reg 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent' 'DisableWindowsConsumerFeatures' 0) -eq 1 }
+    'Delivery Optimization - Disable'           = { (Get-Reg 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization' 'DODownloadMode' 99) -eq 0 }
+    'End Task With Right Click - Enable'        = { (Get-Reg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings' 'TaskbarEndTask' 0) -eq 1 }
+    'Hibernation - Disable'                     = { (Get-Reg 'HKLM:\SYSTEM\CurrentControlSet\Control\Power' 'HibernateEnabled' 1) -eq 0 }
+    'Location Tracking - Disable'               = { (Get-Reg 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location' 'Value' 'Allow') -eq 'Deny' }
+    'Services - Set to Manual'                  = { Test-Path $SvcFile }
+    'Telemetry - Disable'                       = { (Get-Reg 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' 'AllowTelemetry' 99) -eq 0 }
+    'Widgets / News Feed - Disable'             = { (Get-Reg 'HKLM:\SOFTWARE\Policies\Microsoft\Dsh' 'AllowNewsAndInterests' 99) -eq 0 }
+    'Background Apps - Disable'                 = { (Get-Reg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications' 'GlobalUserDisabled' 0) -eq 1 }
+    'Date & Time - Set Time to UTC'             = { (Get-Reg 'HKLM:\SYSTEM\CurrentControlSet\Control\TimeZoneInformation' 'RealTimeIsUniversal' 0) -eq 1 }
+    'IPv6 - Disable'                            = { (Get-Reg 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters' 'DisabledComponents' 0) -eq 255 }
+    'Razer Software Auto-Install - Disable'     = { (Get-Reg 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Device Installer' 'DisableCoInstallers' 0) -eq 1 }
+    'Right-Click Menu Previous Layout - Enable' = { Test-Path 'HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32' }
+    'Storage Sense - Disable'                   = { (Get-Reg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy' '01' 1) -eq 0 }
+    'Visual Effects - Set to Best Performance'  = { (Get-Reg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' 'VisualFXSetting' 0) -eq 2 }
+    'Windows AI (Copilot / Recall) - Disable'   = { (Get-Reg 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot' 'TurnOffWindowsCopilot' 0) -eq 1 }
+}
+$btnPGet.Add_Click({
+    $found = 0
+    foreach ($cb in $script:TweakChecks) {
+        $d = $script:TweakDetect[[string]$cb.Tag.Name]
+        $on = $false
+        if ($d) { try { $on = [bool](& $d) } catch { $on = $false } }
+        $cb.IsChecked = $on
+        if ($on) { $found++ }
+    }
+    Set-Status "Get Installed: $found applied tweak(s) detected and selected."
+    Write-UILog "Get Installed: $found applied tweak(s) detected and selected."
+})
+
 function Invoke-Tweaks([bool]$undo) {
     $sel = @($script:TweakChecks | Where-Object { $_.IsChecked })
     if ($sel.Count -eq 0) { Msg 'Select at least one tweak first.'; return }
@@ -1130,6 +1201,149 @@ foreach ($k in $legacy.Keys) { [void]$cfgRight.Children.Add((New-ActBtn $k $lega
     } catch { L "FAILED: $($_.Exception.Message)" } } }))
 
 # ============================================================================
+#  APP REMOVAL (Tweaks > App Removal)  -  install / remove built-in AppX apps
+# ============================================================================
+#  Format:  Category | Display name | AppX package name | Default selection (1/0)
+$AppxData = @'
+Microsoft Apps|Feedback Hub|Microsoft.WindowsFeedbackHub|1
+Microsoft Apps|Get Help|Microsoft.GetHelp|1
+Microsoft Apps|Microsoft 365|Microsoft.MicrosoftOfficeHub|1
+Microsoft Apps|Microsoft Teams|MSTeams|1
+Microsoft Apps|Outlook for Windows|Microsoft.OutlookForWindows|1
+Microsoft Ecosystem|Mobile Devices|MicrosoftWindows.CrossDevice|1
+Microsoft Ecosystem|Phone Link|Microsoft.YourPhone|1
+Utilities & Productivity|Calculator|Microsoft.WindowsCalculator|0
+Utilities & Productivity|Camera|Microsoft.WindowsCamera|0
+Utilities & Productivity|Clipchamp|Clipchamp.Clipchamp|1
+Utilities & Productivity|Clock|Microsoft.WindowsAlarms|0
+Utilities & Productivity|Media Player|Microsoft.ZuneMusic|0
+Utilities & Productivity|Notepad|Microsoft.WindowsNotepad|0
+Utilities & Productivity|Paint|Microsoft.Paint|0
+Utilities & Productivity|Photos|Microsoft.Windows.Photos|0
+Utilities & Productivity|Quick Assist|MicrosoftCorporationII.QuickAssist|0
+Utilities & Productivity|Snipping Tool|Microsoft.ScreenSketch|0
+Utilities & Productivity|Sound Recorder|Microsoft.WindowsSoundRecorder|0
+Utilities & Productivity|Sticky Notes|Microsoft.MicrosoftStickyNotes|0
+Utilities & Productivity|To Do|Microsoft.Todos|1
+Bing & Web Services|Bing Search|Microsoft.BingSearch|1
+Bing & Web Services|Copilot|Microsoft.Copilot|1
+Bing & Web Services|News|Microsoft.BingNews|1
+Bing & Web Services|Start Experiences App|MicrosoftWindows.Client.WebExperience|1
+Bing & Web Services|Weather|Microsoft.BingWeather|1
+Developer Tools|Dev Home|Microsoft.Windows.DevHome|1
+Developer Tools|Power Automate|Microsoft.PowerAutomateDesktop|1
+Xbox & Gaming|Solitaire Collection|Microsoft.MicrosoftSolitaireCollection|1
+Xbox & Gaming|Xbox App|Microsoft.GamingApp|1
+Xbox & Gaming|Xbox Game Bar|Microsoft.XboxGamingOverlay|1
+Xbox & Gaming|Xbox Identity Provider|Microsoft.XboxIdentityProvider|1
+Xbox & Gaming|Xbox Speech To Text Overlay|Microsoft.XboxSpeechToTextOverlay|1
+Xbox & Gaming|Xbox TCUI|Microsoft.Xbox.TCUI|1
+'@
+$script:AppxItems = $AppxData -split "`r?`n" | Where-Object { $_.Trim() } | ForEach-Object {
+    $p = $_.Split('|'); [pscustomobject]@{ Cat = $p[0]; Name = $p[1]; Pkg = $p[2]; Def = ($p[3] -eq '1') }
+}
+$script:AppxLeftCats = 'Microsoft Apps', 'Microsoft Ecosystem', 'Utilities & Productivity'
+$script:AppxChecks = New-Object System.Collections.ArrayList
+foreach ($c in @($script:AppxItems | Select-Object -ExpandProperty Cat -Unique)) {
+    $host_ = $appRight; if ($script:AppxLeftCats -contains $c) { $host_ = $appLeft }
+    $h = New-Heading $c; $h.FontFamily = New-Object Windows.Media.FontFamily 'Consolas'; $h.FontSize = 17
+    [void]$host_.Children.Add($h)
+    foreach ($a in ($script:AppxItems | Where-Object { $_.Cat -eq $c })) {
+        $cb = New-Object Windows.Controls.CheckBox
+        $cb.Content = $a.Name; $cb.Tag = $a; $cb.ToolTip = $a.Pkg; $cb.Margin = '36,3,0,3'
+        [void]$host_.Children.Add($cb); [void]$script:AppxChecks.Add($cb)
+    }
+}
+
+function Show-AppRemoval {
+    foreach ($k in $script:Views.Keys) { $script:Views[$k].Visibility = 'Collapsed' }
+    $viewAppRemoval.Visibility = 'Visible'
+    $expLog.Visibility = 'Visible'
+    $navTweaks.IsChecked = $false
+}
+
+$script:AppxJob = {
+    param($Mode, $IdStr)
+    function L($m) { $Log.Enqueue([string]$m) }
+    $items = @(); if ($IdStr) { $items = $IdStr -split ';' }
+    switch ($Mode) {
+        'detect' {
+            Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue | ForEach-Object { [string]$_.Name }
+            return
+        }
+        'remove' {
+            foreach ($it in $items) {
+                $pkg, $disp = $it -split '=', 2
+                L ">>> Removing $disp"
+                try { Get-AppxPackage -Name $pkg -AllUsers -ErrorAction Stop | Remove-AppxPackage -AllUsers -ErrorAction Stop }
+                catch {
+                    try { Get-AppxPackage -Name $pkg -ErrorAction Stop | Remove-AppxPackage -ErrorAction Stop }
+                    catch { L "  Could not remove for existing users: $($_.Exception.Message)" }
+                }
+                try {
+                    Get-AppxProvisionedPackage -Online -ErrorAction Stop | Where-Object { $_.DisplayName -eq $pkg } | ForEach-Object {
+                        Remove-AppxProvisionedPackage -Online -PackageName $_.PackageName -ErrorAction Stop | Out-Null
+                    }
+                } catch { L "  Provisioned package: $($_.Exception.Message)" }
+                L '  Done'
+            }
+            L 'Finished removing selected apps.'
+        }
+        'install' {
+            foreach ($it in $items) {
+                $pkg, $disp = $it -split '=', 2
+                L ">>> Installing $disp"
+                $ok = $false
+                foreach ($p in @(Get-AppxPackage -AllUsers -Name $pkg -ErrorAction SilentlyContinue)) {
+                    $m = Join-Path $p.InstallLocation 'AppxManifest.xml'
+                    if (Test-Path $m) {
+                        try { Add-AppxPackage -DisableDevelopmentMode -Register $m -ErrorAction Stop; $ok = $true; L '  Registered from local manifest.' }
+                        catch { L "  Manifest registration failed: $($_.Exception.Message)" }
+                    }
+                }
+                if (-not $ok) {
+                    L '  No local manifest - opening the Microsoft Store...'
+                    try { Start-Process ('ms-windows-store://search/?query=' + [uri]::EscapeDataString($disp)) } catch { L "  FAILED: $($_.Exception.Message)" }
+                }
+            }
+            L 'Finished installing selected apps.'
+        }
+    }
+}
+
+function Invoke-AppxAction([string]$mode) {
+    if ($script:Busy) { Msg 'Another task is still running.' 'OK' 'Warning'; return }
+    $sel = @($script:AppxChecks | Where-Object { $_.IsChecked } | ForEach-Object { $_.Tag })
+    if ($sel.Count -eq 0) { Msg 'Select at least one app first.'; return }
+    $verb = 'Install'; if ($mode -eq 'remove') { $verb = 'Remove' }
+    if ((Msg "$verb $($sel.Count) selected app(s)?" 'YesNo' 'Question') -ne 'Yes') { return }
+    $idStr = ($sel | ForEach-Object { '{0}={1}' -f $_.Pkg, $_.Name }) -join ';'
+    $expLog.IsExpanded = $true
+    Start-BG -Script $script:AppxJob -ArgList @($mode, $idStr) -Label "$verb selected apps..."
+}
+
+$btnAppRemoval.Add_Click({ Show-AppRemoval })
+$btnAppBack.Add_Click({ $navTweaks.IsChecked = $true })
+$btnAppDefault.Add_Click({ foreach ($cb in $script:AppxChecks) { $cb.IsChecked = [bool]$cb.Tag.Def } })
+$btnAppAll.Add_Click({ foreach ($cb in $script:AppxChecks) { $cb.IsChecked = $true } })
+$btnAppClear.Add_Click({ foreach ($cb in $script:AppxChecks) { $cb.IsChecked = $false } })
+$btnAppGet.Add_Click({
+    $done = {
+        param($res)
+        $names = @($res | ForEach-Object { [string]$_ })
+        $n = 0
+        foreach ($cb in $script:AppxChecks) {
+            $cb.IsChecked = ($names -contains [string]$cb.Tag.Pkg)
+            if ($cb.IsChecked) { $n++ }
+        }
+        Write-UILog "Get Installed: $n installed app(s) detected and selected."
+    }
+    Start-BG -Script $script:AppxJob -ArgList @('detect', '') -OnDone $done -Label 'Detecting installed apps...'
+})
+$btnAppInstall.Add_Click({ Invoke-AppxAction 'install' })
+$btnAppRemove.Add_Click({ Invoke-AppxAction 'remove' })
+
+# ============================================================================
 #  UPDATES TAB
 # ============================================================================
 function Set-UpdateProfile([string]$p) {
@@ -1378,6 +1592,7 @@ $script:Views = [ordered]@{
     navCreator10 = $script:Cr['10'].Root
 }
 function Show-View([string]$nav) {
+    $viewAppRemoval.Visibility = 'Collapsed'
     foreach ($k in $script:Views.Keys) { if ($k -eq $nav) { $script:Views[$k].Visibility = 'Visible' } else { $script:Views[$k].Visibility = 'Collapsed' } }
     if ($nav -like 'navCreator*') { $expLog.Visibility = 'Collapsed' } else { $expLog.Visibility = 'Visible' }
 }
