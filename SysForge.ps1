@@ -1620,6 +1620,76 @@ foreach ($opt in @(@('Auto','Auto'), @('Light','Light Mode'), @('Dark','Dark Mod
     [void]$script:ThemeMenu.Items.Add($mi)
     $script:ThemeItems[$opt[0]] = $mi
 }
+
+# ---- Settings menu extras: Import / Export / About / Documentation ----
+$script:DocsUrl = 'https://winutil.christitus.com/'   # change this to your own documentation page if you have one
+
+function Export-SysForgeConfig {
+    $dlg = New-Object Microsoft.Win32.SaveFileDialog
+    $dlg.Filter = 'SysForge config (*.json)|*.json'; $dlg.FileName = 'SysForge_Config.json'; $dlg.Title = 'Export SysForge selections'
+    if (-not $dlg.ShowDialog()) { return }
+    try {
+        $mgr = 'winget'; if ($rbChoco.IsChecked) { $mgr = 'choco' }
+        $cfg = [ordered]@{
+            Tool           = 'SysForge'
+            Version        = 1
+            PackageManager = $mgr
+            Apps           = @($script:Cards       | Where-Object { $_.IsChecked } | ForEach-Object { [string]$_.Tag.Name })
+            Tweaks         = @($script:TweakChecks | Where-Object { $_.IsChecked } | ForEach-Object { [string]$_.Tag.Name })
+            AppxPackages   = @($script:AppxChecks  | Where-Object { $_.IsChecked } | ForEach-Object { [string]$_.Tag.Pkg })
+            Features       = @($script:FeatChecks  | Where-Object { $_.IsChecked } | ForEach-Object { [string]$_.Tag.N })
+        }
+        $cfg | ConvertTo-Json -Depth 5 | Set-Content -Path $dlg.FileName -Encoding UTF8
+        Set-Status "Exported selections to $($dlg.FileName)"
+        Write-UILog "Exported selections to $($dlg.FileName)"; Flush-Log
+    } catch { Msg "Could not export: $($_.Exception.Message)" 'OK' 'Error' }
+}
+
+function Import-SysForgeConfig {
+    $dlg = New-Object Microsoft.Win32.OpenFileDialog
+    $dlg.Filter = 'SysForge config (*.json)|*.json|All files (*.*)|*.*'; $dlg.Title = 'Import SysForge selections'
+    if (-not $dlg.ShowDialog()) { return }
+    try {
+        $cfg = Get-Content -Path $dlg.FileName -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($cfg.Tool -ne 'SysForge') { throw 'This file is not a SysForge configuration.' }
+        $apps  = @($cfg.Apps);         $twks  = @($cfg.Tweaks)
+        $appx  = @($cfg.AppxPackages); $feats = @($cfg.Features)
+        if ($cfg.PackageManager -eq 'choco') { $rbChoco.IsChecked = $true } else { $rbWinget.IsChecked = $true }
+        foreach ($cb in $script:Cards)       { $cb.IsChecked = ($apps  -contains [string]$cb.Tag.Name) }
+        foreach ($cb in $script:TweakChecks) { $cb.IsChecked = ($twks  -contains [string]$cb.Tag.Name) }
+        foreach ($cb in $script:AppxChecks)  { $cb.IsChecked = ($appx  -contains [string]$cb.Tag.Pkg) }
+        foreach ($cb in $script:FeatChecks)  { $cb.IsChecked = ($feats -contains [string]$cb.Tag.N) }
+        Update-Count
+        Set-Status "Imported selections from $($dlg.FileName)"
+        Write-UILog "Imported selections from $($dlg.FileName)"; Flush-Log
+    } catch { Msg "Could not import: $($_.Exception.Message)" 'OK' 'Error' }
+}
+
+function Show-About {
+    Msg ("SysForge - Windows Utility`n`nA Windows system management tool inspired by Chris Titus Tech's WinUtil.`n`n" +
+         "Install apps (WinGet / Chocolatey), apply tweaks, configure Windows features, manage updates and build debloated Windows 10/11 ISOs.`n`n" +
+         "Create a restore point before applying tweaks.") 'OK' 'Information'
+}
+
+function Open-Documentation {
+    try { Start-Process $script:DocsUrl } catch { Msg "Could not open the documentation: $($_.Exception.Message)" 'OK' 'Error' }
+}
+
+[void]$script:ThemeMenu.Items.Add((New-Object Windows.Controls.Separator))
+$miImport = New-Object Windows.Controls.MenuItem; $miImport.Header = 'Import'
+$miImport.Add_Click({ Import-SysForgeConfig })
+[void]$script:ThemeMenu.Items.Add($miImport)
+$miExport = New-Object Windows.Controls.MenuItem; $miExport.Header = 'Export'
+$miExport.Add_Click({ Export-SysForgeConfig })
+[void]$script:ThemeMenu.Items.Add($miExport)
+[void]$script:ThemeMenu.Items.Add((New-Object Windows.Controls.Separator))
+$miAbout = New-Object Windows.Controls.MenuItem; $miAbout.Header = 'About'
+$miAbout.Add_Click({ Show-About })
+[void]$script:ThemeMenu.Items.Add($miAbout)
+$miDocs = New-Object Windows.Controls.MenuItem; $miDocs.Header = 'Documentation'
+$miDocs.Add_Click({ Open-Documentation })
+[void]$script:ThemeMenu.Items.Add($miDocs)
+
 $btnTheme.Add_Click({
     $script:ThemeMenu.PlacementTarget = $btnTheme
     $script:ThemeMenu.Placement = [Windows.Controls.Primitives.PlacementMode]::Bottom
