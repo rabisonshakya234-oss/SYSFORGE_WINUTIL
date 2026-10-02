@@ -1032,6 +1032,59 @@ function New-ActBtn([string]$text, [scriptblock]$click) {
     $b
 }
 
+# ---- Power plans (added to the bottom of Tweaks > Customize Preferences) ----
+$script:PlanGuid = @{
+    Ultimate = 'e9a42b02-d5df-448d-aa00-03f14749eb61'
+    High     = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c'
+    Balanced = '381b4222-f694-41f0-9685-ff5bb260df2e'
+}
+function Get-PowerPlans {
+    $plans = @()
+    foreach ($line in @(powercfg.exe /list)) {
+        if ($line -match '([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\s+\((.+?)\)') {
+            $plans += [pscustomobject]@{ Guid = $Matches[1].ToLower(); Name = $Matches[2] }
+        }
+    }
+    $plans
+}
+function Enable-PowerPlan([string]$kind) {
+    try {
+        $base = $script:PlanGuid[$kind]
+        $label = 'High Performance'; if ($kind -eq 'Ultimate') { $label = 'Ultimate Performance' }
+        $target = $null
+        $plans = @(Get-PowerPlans)
+        if ($kind -eq 'High') { $hit = $plans | Where-Object { $_.Guid -eq $base } | Select-Object -First 1 }
+        else { $hit = $plans | Where-Object { $_.Guid -eq $base -or $_.Name -eq $label } | Select-Object -First 1 }
+        if ($hit) { $target = $hit.Guid }
+        else {
+            $out = (powercfg.exe -duplicatescheme $base | Out-String)
+            if ($out -match '([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})') { $target = $Matches[1] }
+        }
+        if (-not $target) { throw "$label is not available on this system." }
+        powercfg.exe /setactive $target
+        if ($LASTEXITCODE -ne 0) { throw "powercfg could not activate $label." }
+        Set-Status "$label power plan enabled."
+        Write-UILog "$label power plan enabled."
+    } catch { Msg "Could not enable the power plan: $($_.Exception.Message)" 'OK' 'Error' }
+}
+function Disable-PowerPlan([string]$kind) {
+    try {
+        $label = 'High Performance'; if ($kind -eq 'Ultimate') { $label = 'Ultimate Performance' }
+        powercfg.exe /setactive $script:PlanGuid.Balanced
+        if ($LASTEXITCODE -ne 0) { throw 'powercfg could not activate the Balanced plan.' }
+        if ($kind -eq 'Ultimate') {
+            foreach ($pl in @(Get-PowerPlans | Where-Object { $_.Guid -eq $script:PlanGuid.Ultimate -or $_.Name -eq $label })) { powercfg.exe /delete $pl.Guid | Out-Null }
+        }
+        Set-Status "$label power plan disabled (switched to Balanced)."
+        Write-UILog "$label power plan disabled (switched to Balanced)."
+    } catch { Msg "Could not disable the power plan: $($_.Exception.Message)" 'OK' 'Error' }
+}
+[void]$prefHost.Children.Add((New-Heading 'Performance Plans - NOT FOR LAPTOPS' '#D13438'))
+[void]$prefHost.Children.Add((New-ActBtn 'Ultimate Performance - Enable'  { Enable-PowerPlan 'Ultimate' }))
+[void]$prefHost.Children.Add((New-ActBtn 'Ultimate Performance - Disable' { Disable-PowerPlan 'Ultimate' }))
+[void]$prefHost.Children.Add((New-ActBtn 'High Performance - Enable'      { Enable-PowerPlan 'High' }))
+[void]$prefHost.Children.Add((New-ActBtn 'High Performance - Disable'     { Disable-PowerPlan 'High' }))
+
 $Features = @(
     @{ N = '.NET Framework 3.5 (2.0 and 3.0) - Enable';  F = @('NetFx3') },
     @{ N = 'Hyper-V - Enable';                            F = @('Microsoft-Hyper-V-All') },
@@ -1269,8 +1322,11 @@ $script:CreatorJob = {
         if ((Test-Path $etfs) -and (Test-Path $efi)) { $boot = "-bootdata:2#p0,e,b$etfs#pEF,e,b$efi" }
         elseif (Test-Path $efi) { $boot = "-bootdata:1#pEF,e,b$efi" }
         else { throw 'Boot files were not found in the copied ISO.' }
+        $ErrorActionPreference = 'Continue'   # oscdimg prints progress on stderr; do not treat it as a terminating error
         & $osc -m -o -u2 -udfver102 "-lWIN$($O.Ver)" $boot $isoDir $OutPath 2>&1 | ForEach-Object { $t = ([string]$_).Trim(); if ($t -and $t -notmatch '^\d+%') { L $t } }
-        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $OutPath)) { throw 'oscdimg failed to create the ISO.' }
+        $oscExit = $LASTEXITCODE
+        $ErrorActionPreference = 'Stop'
+        if ($oscExit -ne 0 -or -not (Test-Path $OutPath)) { throw "oscdimg failed to create the ISO (exit code $oscExit)." }
         $ok = $true
         L "SUCCESS: ISO saved to $OutPath"
     }
