@@ -6,7 +6,7 @@
 
 Managing Windows sometimes means navigating through multiple settings, executing individual commands, and performing repetitive administrative tasks. SysForge WinUtil aims to simplify these processes by bringing supported Windows utilities and management operations together in one place.
 
-Built with simplicity, usability, and practical functionality in mind, SysForge WinUtil is an ongoing project created by **Rabison Shakya**.
+Built with simplicity, usability, and practical functionality in mind, SysForge WinUtil is an ongoing project created by **Rabison Raj Shakya**.
 
 ---
 
