@@ -600,6 +600,7 @@ Productivity|Flow Launcher|Flow-Launcher.Flow-Launcher|flow-launcher
 Productivity|Ditto Clipboard|Ditto.Ditto|ditto
 Productivity|Greenshot|Greenshot.Greenshot|greenshot
 Utilities|7-Zip|7zip.7zip|7zip
+Utilities|WinRAR|RARLab.WinRAR|winrar
 Utilities|NanaZip|M2Team.NanaZip|nanazip
 Utilities|Everything|voidtools.Everything|everything
 Utilities|WinDirStat|WinDirStat.WinDirStat|windirstat
