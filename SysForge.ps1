@@ -865,6 +865,54 @@ $Tweaks = @(
 [pscustomobject]@{ G='A'; P=3; Name='Windows AI (Copilot / Recall) - Disable'; Tip='Applies policies that turn off Copilot and AI data analysis (Recall).'
   Apply  = { Set-Reg 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot' 'TurnOffWindowsCopilot' 1; Set-Reg 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' 'DisableAIDataAnalysis' 1 }
   Revert = { Remove-RegValue 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot' 'TurnOffWindowsCopilot'; Remove-RegValue 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' 'DisableAIDataAnalysis' } }
+[pscustomobject]@{ G='A'; P=9; Name='Brave Browser - Debloat'; Tip='Applies Brave policies that disable Rewards, Wallet, VPN, AI Chat (Leo) and the stats ping.'
+  Apply  = {
+    $k = 'HKLM:\SOFTWARE\Policies\BraveSoftware\Brave'
+    Set-Reg $k 'BraveRewardsDisabled' 1
+    Set-Reg $k 'BraveWalletDisabled' 1
+    Set-Reg $k 'BraveVPNDisabled' 1
+    Set-Reg $k 'BraveAIChatEnabled' 0
+    Set-Reg $k 'BraveStatsPingEnabled' 0
+  }
+  Revert = {
+    $k = 'HKLM:\SOFTWARE\Policies\BraveSoftware\Brave'
+    'BraveRewardsDisabled','BraveWalletDisabled','BraveVPNDisabled','BraveAIChatEnabled','BraveStatsPingEnabled' | ForEach-Object { Remove-RegValue $k $_ }
+  } }
+[pscustomobject]@{ G='A'; P=9; Name='Microsoft Edge - Debloat'; Tip='Applies Edge policies that disable shopping assistant, rewards, sidebar, startup boost, background mode, recommendations, promotions and first-run screens.'
+  Apply  = {
+    $k = 'HKLM:\SOFTWARE\Policies\Microsoft\Edge'
+    $pol = @{
+      HideFirstRunExperience = 1; EdgeShoppingAssistantEnabled = 0; ShowMicrosoftRewards = 0; PersonalizationReportingEnabled = 0
+      StartupBoostEnabled = 0; BackgroundModeEnabled = 0; HubsSidebarEnabled = 0; EdgeFollowEnabled = 0
+      ShowRecommendationsEnabled = 0; NewTabPageContentEnabled = 0; MicrosoftEdgeInsiderPromotionEnabled = 0
+      DiagnosticData = 0; UserFeedbackAllowed = 0; ConfigureDoNotTrack = 1; PromotionalTabsEnabled = 0
+      EdgeCollectionsEnabled = 0; CryptoWalletEnabled = 0; SpotlightExperiencesAndRecommendationsEnabled = 0
+      WebWidgetAllowed = 0; EdgeWorkspacesEnabled = 0
+    }
+    foreach ($n in $pol.Keys) { Set-Reg $k $n $pol[$n] }
+  }
+  Revert = {
+    $k = 'HKLM:\SOFTWARE\Policies\Microsoft\Edge'
+    'HideFirstRunExperience','EdgeShoppingAssistantEnabled','ShowMicrosoftRewards','PersonalizationReportingEnabled','StartupBoostEnabled','BackgroundModeEnabled',
+    'HubsSidebarEnabled','EdgeFollowEnabled','ShowRecommendationsEnabled','NewTabPageContentEnabled','MicrosoftEdgeInsiderPromotionEnabled','DiagnosticData',
+    'UserFeedbackAllowed','ConfigureDoNotTrack','PromotionalTabsEnabled','EdgeCollectionsEnabled','CryptoWalletEnabled','SpotlightExperiencesAndRecommendationsEnabled',
+    'WebWidgetAllowed','EdgeWorkspacesEnabled' | ForEach-Object { Remove-RegValue $k $_ }
+  } }
+[pscustomobject]@{ G='A'; P=9; Name='Microsoft Edge - Remove'; Tip='Uninstalls Microsoft Edge. WebView2 stays. Windows Update may reinstall it. Make sure you have another browser first. Undo reinstalls Edge via WinGet.'
+  Apply  = {
+    Stop-Process -Name msedge, MicrosoftEdgeUpdate -Force -ErrorAction SilentlyContinue
+    Set-Reg 'HKLM:\SOFTWARE\Microsoft\EdgeUpdate' 'AllowUninstall' '' 'String'
+    $base  = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application"
+    $setup = Get-ChildItem "$base\*\Installer\setup.exe" -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1
+    if (-not $setup) { throw 'Edge installer not found (Edge may already be removed).' }
+    Start-Process $setup.FullName '--uninstall --system-level --verbose-logging --force-uninstall' -Wait
+    Remove-Item "$env:PUBLIC\Desktop\Microsoft Edge.lnk", "$env:USERPROFILE\Desktop\Microsoft Edge.lnk" -Force -ErrorAction SilentlyContinue
+  }
+  Revert = {
+    Remove-RegValue 'HKLM:\SOFTWARE\Microsoft\EdgeUpdate' 'AllowUninstall'
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) { throw 'WinGet not found. Install Edge manually from microsoft.com/edge.' }
+    & winget install -e --id Microsoft.Edge --silent --accept-package-agreements --accept-source-agreements --disable-interactivity | Out-Null
+  } }
 )
 
 $script:TweakChecks = New-Object System.Collections.ArrayList
@@ -909,6 +957,9 @@ $script:TweakDetect = @{
     'Storage Sense - Disable'                   = { (Get-Reg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy' '01' 1) -eq 0 }
     'Visual Effects - Set to Best Performance'  = { (Get-Reg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' 'VisualFXSetting' 0) -eq 2 }
     'Windows AI (Copilot / Recall) - Disable'   = { (Get-Reg 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot' 'TurnOffWindowsCopilot' 0) -eq 1 }
+    'Brave Browser - Debloat'                   = { (Get-Reg 'HKLM:\SOFTWARE\Policies\BraveSoftware\Brave' 'BraveRewardsDisabled' 0) -eq 1 }
+    'Microsoft Edge - Debloat'                  = { (Get-Reg 'HKLM:\SOFTWARE\Policies\Microsoft\Edge' 'HubsSidebarEnabled' 1) -eq 0 }
+    'Microsoft Edge - Remove'                   = { -not (Test-Path "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe") }
 }
 $btnPGet.Add_Click({
     $found = 0
