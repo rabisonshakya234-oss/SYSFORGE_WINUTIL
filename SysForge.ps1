@@ -565,6 +565,17 @@ Documents|SumatraPDF|SumatraPDF.SumatraPDF|sumatrapdf
 Documents|Obsidian|Obsidian.Obsidian|obsidian
 Documents|Notion|Notion.Notion|notion
 Documents|Calibre|calibre.calibre|calibre
+Editor|Clipchamp|9P1J8S7CCWWT|
+Editor|CapCut|ByteDance.CapCut|capcut
+Editor|Adobe Creative Cloud (Premiere Pro / After Effects)|Adobe.CreativeCloud|adobe-creative-cloud
+Editor|DaVinci Resolve|Blackmagic.DaVinciResolve|davinciresolve
+Editor|Shotcut|Meltytech.Shotcut|shotcut
+Editor|OpenShot|OpenShot.OpenShot|openshot
+Editor|Olive Video Editor|OliveTeam.OliveVideoEditor|olive
+Editor|Avidemux|Avidemux.Avidemux|avidemux
+Editor|LosslessCut|mifi.lossless-cut|losslesscut
+Editor|MKVToolNix|MoritzBunkus.MKVToolNix|mkvtoolnix
+Editor|Paint.NET|dotPDN.PaintDotNet|paint.net
 Games|Steam|Valve.Steam|steam
 Games|Epic Games Launcher|EpicGames.EpicGamesLauncher|epicgameslauncher
 Games|GOG Galaxy|GOG.Galaxy|goggalaxy
