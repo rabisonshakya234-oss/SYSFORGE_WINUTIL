@@ -629,6 +629,8 @@ Utilities|CrystalDiskInfo|CrystalDewWorld.CrystalDiskInfo|crystaldiskinfo
 Utilities|Tailscale|Tailscale.Tailscale|tailscale
 Utilities|AnyDesk|AnyDeskSoftwareGmbH.AnyDesk|anydesk
 Utilities|TeamViewer|TeamViewer.TeamViewer|teamviewer
+Virtualization Platform|Oracle VirtualBox|Oracle.VirtualBox|virtualbox
+Virtualization Platform|QEMU|SoftwareFreedomConservancy.QEMU|qemu
 '@
 $Apps = $AppData -split "`r?`n" | Where-Object { $_.Trim() } | ForEach-Object {
     $p = $_.Split('|'); [pscustomobject]@{ Cat = $p[0]; Name = $p[1]; Winget = $p[2]; Choco = $p[3] }
