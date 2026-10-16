@@ -603,6 +603,7 @@ Multimedia|ShareX|ShareX.ShareX|sharex
 Multimedia|ImageGlass|DuongDieuPhap.ImageGlass|imageglass
 Multimedia|Spotify|Spotify.Spotify|spotify
 Productivity|Todoist|Doist.Todoist|
+Productivity|Microsoft PowerToys|Microsoft.PowerToys|powertoys
 Productivity|Joplin|Joplin.Joplin|joplin
 Productivity|Logseq|Logseq.Logseq|logseq
 Productivity|Anki|Anki.Anki|anki
