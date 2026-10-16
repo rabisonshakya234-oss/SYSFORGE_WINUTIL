@@ -136,7 +136,7 @@ Community feedback helps identify problems and improve the project over time.
 
 ## 👨‍💻 Developer
 
-**Rabison Shakya**
+**Rabison Raj Shakya**
 
 Creator and Developer of **SysForge WinUtil**.
 
@@ -171,7 +171,7 @@ If a license has not yet been added, the project's usage and redistribution perm
 
 **Simplifying Windows Management, One Operation at a Time.**
 
-Developed by **Rabison Shakya**
+Developed by **Rabison Raj Shakya**
 
 </p>
 
