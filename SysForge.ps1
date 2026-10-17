@@ -1688,7 +1688,7 @@ foreach ($opt in @(@('Auto','Auto'), @('Light','Light Mode'), @('Dark','Dark Mod
 }
 
 # ---- Settings menu extras: Import / Export / About / Documentation ----
-$script:DocsUrl = 'https://winutil.christitus.com/'   # change this to your own documentation page if you have one
+$script:DocsUrl = 'https://rabisonshakya234-oss.github.io/SYSFORGE_WINUTIL/'   # change this to your own documentation page if you have one
 
 function Export-SysForgeConfig {
     $dlg = New-Object Microsoft.Win32.SaveFileDialog
