@@ -27,6 +27,25 @@ if (-not $isAdmin -or $PSVersionTable.PSEdition -eq 'Core' -or [Threading.Thread
     return
 }
 
+# ============================================================================
+#  CONSOLE SPLASH BANNER  (shown in the console window while the GUI runs)
+# ============================================================================
+try { $Host.UI.RawUI.WindowTitle = 'SysForge' } catch { }
+Clear-Host
+$sfBanner = @'
+ ____            _____                          
+/ ___| _   _ ___|  ___|__  _ __ __ _  ___ 
+\___ \| | | / __| |_ / _ \| '__/ _` |/ _ \
+ ___) | |_| \__ \  _| (_) | | | (_| |  __/
+|____/ \__, |___/_|  \___/|_|  \__, |\___|
+       |___/                   |___/      
+'@
+Write-Host $sfBanner
+Write-Host ''
+Write-Host '====SysForge===='
+Write-Host '=====Windows Toolbox====='
+Write-Host ("[{0}] [INFO] [UI] Starting the interface thread." -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff'))
+
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 
 $script:Log        = New-Object 'System.Collections.Concurrent.ConcurrentQueue[string]'
